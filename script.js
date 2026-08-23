@@ -110,8 +110,30 @@ const COVERS = [
   {id:'cover5', src:'Cover5.svg'},
   {id:'cover6', src:'Cover6.svg'},
   {id:'cover7', src:'Cover7.svg'},
+  {id:'cover8', src:'Cover8.svg'},
+  {id:'cover9', src:'Cover9.svg'},
 
 ];
+
+/* limits the cover picker grid to a fixed number of visible rows; the rest scrolls */
+function capCoverRowHeight(rowEl, visibleRows){
+  const items = rowEl.querySelectorAll('.cover-option');
+  if(items.length <= visibleRows * 3){
+    rowEl.style.maxHeight = 'none';
+    rowEl.style.overflowY = 'visible';
+    return;
+  }
+  // measure after layout so widths (and thus square aspect-ratio heights) are correct
+  requestAnimationFrame(()=>{
+    const first = items[0];
+    if(!first) return;
+    const cellHeight = first.getBoundingClientRect().height;
+    const gap = parseFloat(getComputedStyle(rowEl).rowGap) || 0;
+    const height = (cellHeight * visibleRows) + (gap * (visibleRows - 1));
+    rowEl.style.maxHeight = height + 'px';
+    rowEl.style.overflowY = 'auto';
+  });
+}
 
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
@@ -154,7 +176,7 @@ function closeModals(){
 function folderIconSVG(f){
   if(f && f.cover){
     const c = COVERS.find(x=>x.id===f.cover);
-    if(c) return `<img src="${c.src}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    if(c) return `<img src="${c.src}" alt="" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;">`;
   }
   const topColor = (f && f.color) || DEFAULT_COLOR;
   const bodyColor = softerColor(topColor);
@@ -825,10 +847,11 @@ function onManualPointerMove(e){
   const dy = e.clientY - manualDrag.startY;
   if(!manualDrag.dragging){
     if(Math.abs(dx) > 8 || Math.abs(dy) > 8){ startManualDrag(e); } else { return; }
+    manualDrag.pendingEvent = e;
+    manualDrag.rafId = requestAnimationFrame(manualDragTick);
   }
   e.preventDefault();
-  moveManualGhost(e);
-  updateManualHover(e);
+  manualDrag.pendingEvent = e;
 }
 function startManualDrag(e){
   manualDrag.dragging = true;
@@ -842,40 +865,57 @@ function startManualDrag(e){
   ghost.style.pointerEvents='none';
   ghost.style.opacity='0.9';
   ghost.style.zIndex='999';
-  ghost.style.transform='scale(1.05) rotate(-2deg)';
+  ghost.style.willChange='transform';
+  ghost.style.transform='translate3d(0,0,0) scale(1.05) rotate(-2deg)';
   ghost.style.transition='none';
   document.body.appendChild(ghost);
   manualDrag.ghost = ghost;
+  manualDrag.baseLeft = rect.left;
+  manualDrag.baseTop = rect.top;
   manualDrag.offsetX = e.clientX - rect.left;
   manualDrag.offsetY = e.clientY - rect.top;
   manualDrag.el.style.opacity = '0.3';
+  manualDrag.hoverEl = null;
+  manualDrag.rafId = null;
+  manualDrag.pendingEvent = null;
 }
-function moveManualGhost(e){
-  const g = manualDrag.ghost;
-  if(!g) return;
-  g.style.left = (e.clientX - manualDrag.offsetX)+'px';
-  g.style.top = (e.clientY - manualDrag.offsetY)+'px';
+function moveManualGhost(){
+  const d = manualDrag;
+  const g = d.ghost;
+  if(!g || !d.pendingEvent) return;
+  const dx = d.pendingEvent.clientX - d.offsetX - d.baseLeft;
+  const dy = d.pendingEvent.clientY - d.offsetY - d.baseTop;
+  g.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.05) rotate(-2deg)`;
 }
-function updateManualHover(e){
-  document.querySelectorAll('.manual-slot.drag-over').forEach(x=>x.classList.remove('drag-over'));
-  manualDrag.ghost.style.display='none';
+function updateManualHover(){
+  const d = manualDrag;
+  const e = d.pendingEvent;
+  if(!e) return;
   const under = document.elementFromPoint(e.clientX, e.clientY);
-  manualDrag.ghost.style.display='';
   const targetItem = under ? under.closest('.manual-slot') : null;
-  if(targetItem && parseInt(targetItem.dataset.slot,10) !== manualDrag.fromIdx){
-    targetItem.classList.add('drag-over');
-    manualDrag.toIdx = parseInt(targetItem.dataset.slot,10);
-  } else {
-    manualDrag.toIdx = null;
-  }
+  const valid = targetItem && parseInt(targetItem.dataset.slot,10) !== d.fromIdx ? targetItem : null;
+  if(valid === d.hoverEl) return; // nothing changed, skip DOM writes
+  if(d.hoverEl) d.hoverEl.classList.remove('drag-over');
+  if(valid) valid.classList.add('drag-over');
+  d.hoverEl = valid;
+  d.toIdx = valid ? parseInt(valid.dataset.slot,10) : null;
+}
+function manualDragTick(){
+  const d = manualDrag;
+  if(!d || !d.dragging){ return; }
+  moveManualGhost();
+  updateManualHover();
+  d.rafId = requestAnimationFrame(manualDragTick);
 }
 function onManualPointerUp(e){
   document.removeEventListener('pointermove', onManualPointerMove);
   if(!manualDrag) return;
-  document.querySelectorAll('.manual-slot.drag-over').forEach(x=>x.classList.remove('drag-over'));
+  if(manualDrag.rafId) cancelAnimationFrame(manualDrag.rafId);
+  manualDrag.dragging = false;
+  if(manualDrag.hoverEl) manualDrag.hoverEl.classList.remove('drag-over');
   if(manualDrag.ghost) manualDrag.ghost.remove();
   if(manualDrag.el) manualDrag.el.style.opacity = '';
-  if(manualDrag.dragging && manualDrag.toIdx !== null){
+  if(manualDrag.toIdx !== null && manualDrag.toIdx !== undefined && manualDrag.toIdx !== manualDrag.fromIdx){
     const a = manualDrag.fromIdx, b = manualDrag.toIdx;
     const tmp = manualSlots[a];
     manualSlots[a] = manualSlots[b];
@@ -1114,6 +1154,10 @@ function cfSwitchTab(tab){
   $('cfTabCover').classList.toggle('active', tab==='cover');
   $('cfColorSection').style.display = tab==='color' ? 'block' : 'none';
   $('cfCoverSection').style.display = tab==='cover' ? 'block' : 'none';
+  if(tab === 'cover'){
+    // section is only measurable once it's actually visible, so (re)cap it now
+    capCoverRowHeight($('coverRow'), 2);
+  }
 }
 
 function cfUpdatePreview(){
@@ -1175,10 +1219,12 @@ function openColorModal(){
     const op = document.createElement('div');
     op.className = 'cover-option';
     op.dataset.cover = c.id;
-    op.innerHTML = `<img src="${c.src}" alt="">`;
+    op.innerHTML = `<img src="${c.src}" alt=""><span class="cover-check"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
     op.onclick = ()=>cfPickCover(c.id);
     coverRow.appendChild(op);
   });
+  /* cap the visible grid to 2 rows (6 covers at 3-per-row); anything beyond scrolls */
+  capCoverRowHeight(coverRow, 2);
 
   $('cfCustomColor').oninput = (e)=>cfPickColor(e.target.value);
   $('cfHexInput').onchange = (e)=>{
