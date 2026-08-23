@@ -29,7 +29,7 @@ function saveState(){
   setTimeout(()=>{
     _saveQueued = false;
     try{
-      const state = { folders, deleted, tags, currentTheme };
+      const state = { folders, deleted, tags, currentTheme, defaultFolderColor, randomFolderColor };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }catch(err){
       console.error('Could not save Notewise state:', err);
@@ -45,6 +45,8 @@ async function loadState(){
     if(Array.isArray(state.folders)) folders = state.folders;
     if(Array.isArray(state.deleted)) deleted = state.deleted;
     if(Array.isArray(state.tags)) tags = state.tags;
+    if(typeof state.defaultFolderColor === 'string') defaultFolderColor = state.defaultFolderColor;
+    if(typeof state.randomFolderColor === 'boolean') randomFolderColor = state.randomFolderColor;
     if(state.currentTheme){
       currentTheme = state.currentTheme;
       if(currentTheme==='light'){
@@ -90,6 +92,15 @@ const COLORS = [
 ];
 const DEFAULT_COLOR = '#4f7294';
 
+/* ---------- folder settings (default color / random color on create) ---------- */
+let defaultFolderColor = DEFAULT_COLOR;
+let randomFolderColor = false;
+let fsPendingColor = DEFAULT_COLOR; // color chosen inside the settings panel before Save is pressed
+
+function pickRandomFolderColor(){
+  return COLORS[Math.floor(Math.random() * COLORS.length)];
+}
+
 /* preset folder cover images offered in the "Customize folder" picker */
 const COVERS = [
   {id:'cover1', src:'Cover1.svg'},
@@ -132,7 +143,7 @@ function toast(msg){
 }
 
 function closeAllPanels(){
-  ['fabMenu','folderMenu','trashMenu','profilePanel','sortMenu','selectMenu'].forEach(id=>$(id).style.display='none');
+  ['fabMenu','folderMenu','trashMenu','profilePanel','sortMenu','selectMenu','folderSettingsMenu'].forEach(id=>$(id).style.display='none');
   $('overlay').classList.remove('show');
 }
 function closeModals(){
@@ -216,6 +227,7 @@ function render(){
   $('bottomNav').style.display = modeActive ? 'none' : 'flex';
   $('breadcrumbSelectBtn').style.display = modeActive ? 'none' : 'flex';
   $('breadcrumbSortBtn').style.display = modeActive ? 'none' : 'flex';
+  $('breadcrumbFolderSettingsBtn').style.display = (modeActive || activeTab==='trash') ? 'none' : 'flex';
   $('selectFooter').style.display = selectMode ? 'flex' : 'none';
   $('trashSelectFooter').style.display = trashSelectMode ? 'flex' : 'none';
   $('manualSortFooter').style.display = manualSortMode ? 'flex' : 'none';
@@ -311,6 +323,7 @@ function renderTrash(){
   $('crumbHome').textContent = 'Trash';
   $('crumbHome').style.cursor = 'default';
   $('breadcrumbSortBtn').style.display = 'none';
+  $('breadcrumbFolderSettingsBtn').style.display = 'none';
   $('breadcrumbSelectBtn').style.display = trashSelectMode ? 'none' : 'flex';
 
   deleted.forEach(f=>{
@@ -403,7 +416,6 @@ function escapeHtml(s){
 
 /* ---------- event delegation ---------- */
 $('folderGrid').addEventListener('click', e=>{
-  if(window.__justDragged) return;
   if(manualSortMode) return;
   if(selectMode){
     const item = e.target.closest('.folder-item');
@@ -458,6 +470,12 @@ $('breadcrumbSortBtn').addEventListener('click', e=>{
   const willOpen = $('sortMenu').style.display !== 'block';
   closeAllPanels();
   if(willOpen) openSortMenu();
+});
+$('breadcrumbFolderSettingsBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  const willOpen = $('folderSettingsMenu').style.display !== 'block';
+  closeAllPanels();
+  if(willOpen) openFolderSettingsMenu();
 });
 
 document.querySelectorAll('.navbtn').forEach(b=>{
@@ -567,6 +585,48 @@ function openSortMenu(){
 function openSelectMenu(){
   positionPanelRightAligned($('selectMenu'), $('breadcrumbSelectBtn'));
   $('overlay').classList.add('show');
+}
+
+/* ---------- folder settings panel (default color / random color) ---------- */
+function fsRenderColorRow(){
+  const row = $('fsColorRow');
+  row.innerHTML = '';
+  COLORS.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className = 'color-circle';
+    sw.style.background = c;
+    sw.dataset.color = c;
+    sw.title = c;
+    sw.onclick = ()=>fsPickColor(c);
+    row.appendChild(sw);
+  });
+  fsUpdateColorSelection();
+}
+function fsUpdateColorSelection(){
+  document.querySelectorAll('#fsColorRow .color-circle').forEach(sw=>{
+    sw.classList.toggle('selected', sw.dataset.color.toUpperCase() === fsPendingColor.toUpperCase());
+  });
+}
+function fsPickColor(hex){
+  fsPendingColor = hex.toUpperCase();
+  fsUpdateColorSelection();
+}
+function fsToggleRandom(){
+  // just reflects the checkbox while the panel is open; committed on Save
+}
+function openFolderSettingsMenu(){
+  fsPendingColor = defaultFolderColor.toUpperCase();
+  $('fsRandomToggle').checked = randomFolderColor;
+  fsRenderColorRow();
+  positionPanelRightAligned($('folderSettingsMenu'), $('breadcrumbFolderSettingsBtn'));
+  $('overlay').classList.add('show');
+}
+function fsSaveSettings(){
+  defaultFolderColor = fsPendingColor;
+  randomFolderColor = $('fsRandomToggle').checked;
+  saveState();
+  closeAllPanels();
+  toast('Folder color settings saved');
 }
 
 /* ---------- select mode ---------- */
@@ -957,7 +1017,8 @@ function nfToggleAuto(){
 }
 
 function nfCreateCurrent(name){
-  const f = {id:uid(), name, emoji:'', color: DEFAULT_COLOR, parentId: currentParent, saved:false, tagId:null, createdAt: Date.now()};
+  const color = randomFolderColor ? pickRandomFolderColor() : defaultFolderColor;
+  const f = {id:uid(), name, emoji:'', color, parentId: currentParent, saved:false, tagId:null, createdAt: Date.now()};
   folders.push(f);
   nfCreatedIds.push(f.id);
   return f;
@@ -1442,144 +1503,6 @@ document.querySelectorAll('.modal input[type=text]').forEach(input=>{
   });
 });
 
-/* ---------- drag & drop: reorder + move into folder ---------- */
-let dragState = null;
-
-function attachDragHandlers(){
-  $('folderGrid').addEventListener('pointerdown', onDragPointerDown);
-}
-
-function onDragPointerDown(e){
-  if(e.button !== undefined && e.button !== 0) return;
-  if(activeTab !== 'home' || searchQuery || selectMode || manualSortMode) return; // only reorder while browsing folders normally
-  const item = e.target.closest('.folder-item');
-  if(!item) return;
-  dragState = {
-    id: item.dataset.id,
-    startX: e.clientX,
-    startY: e.clientY,
-    dragging: false,
-    el: item
-  };
-  document.addEventListener('pointermove', onDragPointerMove);
-  document.addEventListener('pointerup', onDragPointerUp, {once:true});
-}
-
-function onDragPointerMove(e){
-  if(!dragState) return;
-  const dx = e.clientX - dragState.startX;
-  const dy = e.clientY - dragState.startY;
-  if(!dragState.dragging){
-    if(Math.abs(dx) > 8 || Math.abs(dy) > 8){
-      startDragging(e);
-    } else {
-      return;
-    }
-  }
-  e.preventDefault();
-  moveGhost(e);
-  updateHover(e);
-}
-
-function startDragging(e){
-  dragState.dragging = true;
-  const rect = dragState.el.getBoundingClientRect();
-  const ghost = dragState.el.cloneNode(true);
-  ghost.style.position='fixed';
-  ghost.style.left = rect.left+'px';
-  ghost.style.top = rect.top+'px';
-  ghost.style.width = rect.width+'px';
-  ghost.style.margin='0';
-  ghost.style.pointerEvents='none';
-  ghost.style.opacity='0.9';
-  ghost.style.zIndex='999';
-  ghost.style.transform='scale(1.05) rotate(-2deg)';
-  ghost.style.transition='none';
-  document.body.appendChild(ghost);
-  dragState.ghost = ghost;
-  dragState.offsetX = e.clientX - rect.left;
-  dragState.offsetY = e.clientY - rect.top;
-  dragState.el.style.opacity = '0.3';
-  dragState.hoverTarget = null;
-  dragState.hoverHistory = [];
-  dragState.suppressNestId = null;
-}
-
-function moveGhost(e){
-  const g = dragState.ghost;
-  if(!g) return;
-  g.style.left = (e.clientX - dragState.offsetX)+'px';
-  g.style.top = (e.clientY - dragState.offsetY)+'px';
-}
-
-function updateHover(e){
-  document.querySelectorAll('.folder-item.drag-over').forEach(x=>x.classList.remove('drag-over'));
-  dragState.ghost.style.display='none';
-  const under = document.elementFromPoint(e.clientX, e.clientY);
-  dragState.ghost.style.display='';
-  const targetItem = under ? under.closest('.folder-item') : null;
-  const targetId = (targetItem && targetItem.dataset.id !== dragState.id) ? targetItem.dataset.id : null;
-
-  if(targetId !== dragState.hoverTarget){
-    dragState.hoverTarget = targetId;
-    dragState.hoverHistory = targetId ? [{x:e.clientX, t:Date.now()}] : [];
-  } else if(targetId){
-    dragState.hoverHistory.push({x:e.clientX, t:Date.now()});
-    if(dragState.hoverHistory.length > 14) dragState.hoverHistory.shift();
-    checkShake();
-  }
-
-  if(targetId && dragState.suppressNestId !== targetId){
-    targetItem.classList.add('drag-over');
-  }
-}
-
-function checkShake(){
-  const hist = dragState.hoverHistory;
-  if(hist.length < 6) return;
-  const now = Date.now();
-  const recent = hist.filter(p=> now-p.t < 700);
-  if(recent.length < 6) return;
-  let reversals = 0;
-  for(let i=2;i<recent.length;i++){
-    const d1 = recent[i-1].x - recent[i-2].x;
-    const d2 = recent[i].x - recent[i-1].x;
-    if(Math.abs(d1) > 6 && Math.abs(d2) > 6 && (d1>0) !== (d2>0)) reversals++;
-  }
-  if(reversals >= 2 && dragState.suppressNestId !== dragState.hoverTarget){
-    const targetId = dragState.hoverTarget;
-    dragState.suppressNestId = targetId;
-    document.querySelectorAll('.folder-item.drag-over').forEach(x=>x.classList.remove('drag-over'));
-    const target = folders.find(f=>f.id===targetId);
-    if(target){
-      // bump the target folder to the 2nd position among its siblings
-      const idx = folders.indexOf(target);
-      folders.splice(idx,1);
-      const remainingSiblings = folders.filter(f=>f.parentId===target.parentId);
-      let insertAt;
-      if(remainingSiblings.length===0){
-        insertAt = folders.length;
-      } else {
-        insertAt = folders.indexOf(remainingSiblings[0]) + 1;
-      }
-      folders.splice(insertAt, 0, target);
-      render();
-      toast(target.name + ' moved to 2nd position');
-      const el = document.querySelector(`.folder-item[data-id="${dragState.id}"]`);
-      if(el){ dragState.el = el; el.style.opacity = '0.3'; }
-    }
-  }
-}
-
-function onDragPointerUp(e){
-  document.removeEventListener('pointermove', onDragPointerMove);
-  if(!dragState) return;
-  if(dragState.dragging){
-    finishDrag(e);
-  }
-  dragState = null;
-}
-
 function isDescendantOf(candidateId, ancestorId){
   let cur = folders.find(f=>f.id===candidateId);
   while(cur){
@@ -1589,67 +1512,6 @@ function isDescendantOf(candidateId, ancestorId){
   return false;
 }
 
-function finishDrag(e){
-  document.querySelectorAll('.folder-item.drag-over').forEach(x=>x.classList.remove('drag-over'));
-  if(dragState.ghost) dragState.ghost.remove();
-  const draggedEl = document.querySelector(`.folder-item[data-id="${dragState.id}"]`);
-  if(draggedEl) draggedEl.style.opacity = '';
-
-  const dragged = folders.find(f=>f.id===dragState.id);
-  if(!dragged) return;
-
-  const under = document.elementFromPoint(e.clientX, e.clientY);
-  const targetItem = under ? under.closest('.folder-item') : null;
-  const targetId = targetItem ? targetItem.dataset.id : null;
-
-  window.__justDragged = true;
-  setTimeout(()=>{ window.__justDragged = false; }, 0);
-
-  if(targetId && targetId !== dragged.id && dragState.suppressNestId !== targetId){
-    const target = folders.find(f=>f.id===targetId);
-    if(target && !isDescendantOf(target.id, dragged.id)){
-      dragged.parentId = target.id;
-      const idx = folders.indexOf(dragged);
-      folders.splice(idx,1);
-      folders.push(dragged);
-      render();
-      toast('Moved into ' + target.name);
-      return;
-    }
-  }
-
-  reorderDrop(dragged, e);
-  render();
-}
-
-function reorderDrop(dragged, e){
-  const siblingEls = Array.from(document.querySelectorAll('.folder-item[data-id]')).filter(el=>{
-    if(el.dataset.id === dragged.id) return false;
-    const f = folders.find(x=>x.id===el.dataset.id);
-    return f && f.parentId === dragged.parentId;
-  });
-  let insertBeforeId = null;
-  for(const el of siblingEls){
-    const r = el.getBoundingClientRect();
-    const sameRow = e.clientY >= r.top && e.clientY <= r.bottom;
-    if(e.clientY < r.top || (sameRow && e.clientX < r.left + r.width/2)){
-      insertBeforeId = el.dataset.id;
-      break;
-    }
-  }
-  const idx = folders.indexOf(dragged);
-  folders.splice(idx,1);
-  if(insertBeforeId){
-    const targetIdx = folders.findIndex(f=>f.id===insertBeforeId);
-    folders.splice(targetIdx, 0, dragged);
-  } else {
-    let lastIdx = -1;
-    folders.forEach((f,i)=>{ if(f.parentId===dragged.parentId) lastIdx = i; });
-    folders.splice(lastIdx+1, 0, dragged);
-  }
-}
-
-attachDragHandlers();
 (async ()=>{
   await loadState();
   render();
