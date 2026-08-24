@@ -200,17 +200,49 @@
     </button>
   </div>
 
-  <!-- folder settings panel (default folder color / random color) -->
+  <!-- folder settings panel (default folder color / cover) -->
   <div class="panel folder-settings-panel" id="folderSettingsMenu" style="display:none;">
-    <div class="fs-title">Default folder color</div>
-    <div class="color-row fs-color-row" id="fsColorRow"></div>
-    <div class="fs-random-row">
-      <span class="fs-random-label">Random color each time a folder is created</span>
-      <label class="nf-switch">
-        <input type="checkbox" id="fsRandomToggle" onchange="fsToggleRandom()">
-        <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
-      </label>
+
+    <div class="fs-section">
+      <div class="fs-section-head">
+        <div class="fs-title">Default Folder Color</div>
+        <button type="button" class="fs-checkbox" id="fsColorCheckbox" onclick="fsSwitchSection('color')" aria-label="Use color as the default folder style">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
+      <div class="fs-section-body" id="fsColorBody">
+        <div class="color-row fs-color-row" id="fsColorRow"></div>
+        <div class="fs-random-row">
+          <span class="fs-random-label">Random color when a folder is created</span>
+          <label class="nf-switch">
+            <input type="checkbox" id="fsRandomColorToggle" onchange="fsToggleRandomColor()">
+            <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
     </div>
+
+    <div class="fs-divider"></div>
+
+    <div class="fs-section">
+      <div class="fs-section-head">
+        <div class="fs-title">Default Folder Cover</div>
+        <button type="button" class="fs-checkbox" id="fsCoverCheckbox" onclick="fsSwitchSection('cover')" aria-label="Use cover as the default folder style">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
+      <div class="fs-section-body" id="fsCoverBody">
+        <div class="cover-row fs-cover-row" id="fsCoverRow"></div>
+        <div class="fs-random-row">
+          <span class="fs-random-label">Random cover when a folder is created</span>
+          <label class="nf-switch">
+            <input type="checkbox" id="fsRandomCoverToggle" onchange="fsToggleRandomCover()">
+            <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <div class="row">
       <button class="btn-cancel" onclick="closeAllPanels()">Cancel</button>
       <button class="btn-primary" onclick="fsSaveSettings()">Save</button>
