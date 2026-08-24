@@ -29,7 +29,7 @@ function saveState(){
   setTimeout(()=>{
     _saveQueued = false;
     try{
-      const state = { folders, deleted, tags, currentTheme, defaultFolderColor, randomFolderColor };
+      const state = { folders, deleted, tags, currentTheme, defaultFolderColor, randomFolderColor, defaultFolderCover, randomFolderCover, folderDefaultMode };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }catch(err){
       console.error('Could not save Notewise state:', err);
@@ -47,6 +47,9 @@ async function loadState(){
     if(Array.isArray(state.tags)) tags = state.tags;
     if(typeof state.defaultFolderColor === 'string') defaultFolderColor = state.defaultFolderColor;
     if(typeof state.randomFolderColor === 'boolean') randomFolderColor = state.randomFolderColor;
+    if(typeof state.defaultFolderCover === 'string') defaultFolderCover = state.defaultFolderCover;
+    if(typeof state.randomFolderCover === 'boolean') randomFolderCover = state.randomFolderCover;
+    if(state.folderDefaultMode === 'color' || state.folderDefaultMode === 'cover') folderDefaultMode = state.folderDefaultMode;
     if(state.currentTheme){
       currentTheme = state.currentTheme;
       if(currentTheme==='light'){
@@ -92,13 +95,22 @@ const COLORS = [
 ];
 const DEFAULT_COLOR = '#4f7294';
 
-/* ---------- folder settings (default color / random color on create) ---------- */
+/* ---------- folder settings (default color / default cover on create) ---------- */
 let defaultFolderColor = DEFAULT_COLOR;
 let randomFolderColor = false;
+let defaultFolderCover = null;   // cover id, or null until the user picks one
+let randomFolderCover = false;
+let folderDefaultMode = 'color'; // 'color' | 'cover' - which section is the active default for new folders
+
+let fsPendingMode = 'color';        // section chosen inside the settings panel before Save is pressed
 let fsPendingColor = DEFAULT_COLOR; // color chosen inside the settings panel before Save is pressed
+let fsPendingCover = null;          // cover chosen inside the settings panel before Save is pressed
 
 function pickRandomFolderColor(){
   return COLORS[Math.floor(Math.random() * COLORS.length)];
+}
+function pickRandomFolderCover(){
+  return COVERS[Math.floor(Math.random() * COVERS.length)].id;
 }
 
 /* preset folder cover images offered in the "Customize folder" picker */
@@ -112,6 +124,7 @@ const COVERS = [
   {id:'cover7', src:'Cover7.svg'},
   {id:'cover8', src:'Cover8.svg'},
   {id:'cover9', src:'Cover9.svg'},
+ 
 
 ];
 
@@ -545,10 +558,11 @@ $('avatarBtn').addEventListener('click', e=>{
 function openFolderMenu(anchorEl){
   closeAllPanels();
   const menu = $('folderMenu');
-  // measure the menu's real width first (off-screen) so centering is accurate
+  // measure the menu's real size first (off-screen) so centering/flipping is accurate
   menu.style.visibility='hidden';
   menu.style.display='block';
   const menuWidth = menu.offsetWidth;
+  const menuHeight = menu.offsetHeight;
 
   const rect = anchorEl.getBoundingClientRect();
   const phoneRect = document.querySelector('.phone').getBoundingClientRect();
@@ -557,7 +571,12 @@ function openFolderMenu(anchorEl){
   let left = anchorCenter - (menuWidth/2);
   left = Math.max(10, Math.min(left, phoneRect.width - menuWidth - 10));
 
-  menu.style.top = (rect.bottom - phoneRect.top + 6) + 'px';
+  // flip above the anchor when there isn't enough room below it
+  const spaceBelow = phoneRect.bottom - rect.bottom;
+  const openUp = spaceBelow < (menuHeight + 16) && (rect.top - phoneRect.top) > menuHeight;
+  menu.style.top = openUp
+    ? (rect.top - phoneRect.top - menuHeight - 6) + 'px'
+    : (rect.bottom - phoneRect.top + 6) + 'px';
   menu.style.left = left + 'px';
   menu.style.visibility='';
   $('overlay').classList.add('show');
@@ -569,10 +588,11 @@ function openFolderMenu(anchorEl){
 function openTrashMenu(anchorEl){
   closeAllPanels();
   const menu = $('trashMenu');
-  // measure the menu's real width first (off-screen) so centering is accurate
+  // measure the menu's real size first (off-screen) so centering/flipping is accurate
   menu.style.visibility='hidden';
   menu.style.display='block';
   const menuWidth = menu.offsetWidth;
+  const menuHeight = menu.offsetHeight;
 
   const rect = anchorEl.getBoundingClientRect();
   const phoneRect = document.querySelector('.phone').getBoundingClientRect();
@@ -581,7 +601,12 @@ function openTrashMenu(anchorEl){
   let left = anchorCenter - (menuWidth/2);
   left = Math.max(10, Math.min(left, phoneRect.width - menuWidth - 10));
 
-  menu.style.top = (rect.bottom - phoneRect.top + 6) + 'px';
+  // flip above the anchor when there isn't enough room below it
+  const spaceBelow = phoneRect.bottom - rect.bottom;
+  const openUp = spaceBelow < (menuHeight + 16) && (rect.top - phoneRect.top) > menuHeight;
+  menu.style.top = openUp
+    ? (rect.top - phoneRect.top - menuHeight - 6) + 'px'
+    : (rect.bottom - phoneRect.top + 6) + 'px';
   menu.style.left = left + 'px';
   menu.style.visibility='';
   $('overlay').classList.add('show');
@@ -609,7 +634,12 @@ function openSelectMenu(){
   $('overlay').classList.add('show');
 }
 
-/* ---------- folder settings panel (default color / random color) ---------- */
+/* ---------- folder settings panel (default color / default cover) ---------- */
+/* Color and Cover are mutually exclusive "defaults" for new folders. The
+   checkbox next to each section title marks which one is active; the other
+   section's swatches/covers and its own random toggle are visually and
+   functionally blocked while it isn't the active default. */
+
 function fsRenderColorRow(){
   const row = $('fsColorRow');
   row.innerHTML = '';
@@ -622,33 +652,94 @@ function fsRenderColorRow(){
     sw.onclick = ()=>fsPickColor(c);
     row.appendChild(sw);
   });
-  fsUpdateColorSelection();
 }
-function fsUpdateColorSelection(){
-  document.querySelectorAll('#fsColorRow .color-circle').forEach(sw=>{
-    sw.classList.toggle('selected', sw.dataset.color.toUpperCase() === fsPendingColor.toUpperCase());
+function fsRenderCoverRow(){
+  const row = $('fsCoverRow');
+  row.innerHTML = '';
+  COVERS.forEach(c=>{
+    const op = document.createElement('div');
+    op.className = 'cover-option';
+    op.dataset.cover = c.id;
+    op.innerHTML = `<img src="${c.src}" alt=""><span class="cover-check"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    op.onclick = ()=>fsPickCover(c.id);
+    row.appendChild(op);
   });
 }
+
+function fsUpdateColorSelection(){
+  // once "random" is on for this section, no single swatch is "the" default, so the soft halo goes away
+  const randomOn = $('fsRandomColorToggle').checked;
+  document.querySelectorAll('#fsColorRow .color-circle').forEach(sw=>{
+    sw.classList.toggle('selected', !randomOn && sw.dataset.color.toUpperCase() === fsPendingColor.toUpperCase());
+  });
+}
+function fsUpdateCoverSelection(){
+  const randomOn = $('fsRandomCoverToggle').checked;
+  document.querySelectorAll('#fsCoverRow .cover-option').forEach(op=>{
+    op.classList.toggle('selected', !randomOn && op.dataset.cover === fsPendingCover);
+  });
+}
+
 function fsPickColor(hex){
+  if(fsPendingMode !== 'color') return; // color section is blocked while cover is the active default
   fsPendingColor = hex.toUpperCase();
   fsUpdateColorSelection();
 }
-function fsToggleRandom(){
-  // just reflects the checkbox while the panel is open; committed on Save
+function fsPickCover(coverId){
+  if(fsPendingMode !== 'cover') return; // cover section is blocked while color is the active default
+  fsPendingCover = coverId;
+  fsUpdateCoverSelection();
 }
+function fsToggleRandomColor(){
+  if(fsPendingMode !== 'color') return;
+  fsUpdateColorSelection();
+}
+function fsToggleRandomCover(){
+  if(fsPendingMode !== 'cover') return;
+  fsUpdateCoverSelection();
+}
+
+function fsSwitchSection(section){
+  if(fsPendingMode === section) return;
+  fsPendingMode = section;
+  fsApplyActiveSection();
+}
+function fsApplyActiveSection(){
+  const colorActive = fsPendingMode === 'color';
+  $('fsColorCheckbox').classList.toggle('checked', colorActive);
+  $('fsCoverCheckbox').classList.toggle('checked', !colorActive);
+  $('fsColorBody').classList.toggle('fs-blocked', !colorActive);
+  $('fsCoverBody').classList.toggle('fs-blocked', colorActive);
+  $('fsRandomColorToggle').disabled = !colorActive;
+  $('fsRandomCoverToggle').disabled = colorActive;
+  fsUpdateColorSelection();
+  fsUpdateCoverSelection();
+}
+
 function openFolderSettingsMenu(){
+  fsPendingMode = folderDefaultMode;
   fsPendingColor = defaultFolderColor.toUpperCase();
-  $('fsRandomToggle').checked = randomFolderColor;
+  fsPendingCover = defaultFolderCover || COVERS[0].id;
+
+  $('fsRandomColorToggle').checked = randomFolderColor;
+  $('fsRandomCoverToggle').checked = randomFolderCover;
+
   fsRenderColorRow();
+  fsRenderCoverRow();
+  fsApplyActiveSection();
+
   positionPanelRightAligned($('folderSettingsMenu'), $('breadcrumbFolderSettingsBtn'));
   $('overlay').classList.add('show');
 }
 function fsSaveSettings(){
+  folderDefaultMode = fsPendingMode;
   defaultFolderColor = fsPendingColor;
-  randomFolderColor = $('fsRandomToggle').checked;
+  randomFolderColor = $('fsRandomColorToggle').checked;
+  defaultFolderCover = fsPendingCover;
+  randomFolderCover = $('fsRandomCoverToggle').checked;
   saveState();
   closeAllPanels();
-  toast('Folder color settings saved');
+  toast('Folder settings saved');
 }
 
 /* ---------- select mode ---------- */
@@ -1057,8 +1148,12 @@ function nfToggleAuto(){
 }
 
 function nfCreateCurrent(name){
-  const color = randomFolderColor ? pickRandomFolderColor() : defaultFolderColor;
-  const f = {id:uid(), name, emoji:'', color, parentId: currentParent, saved:false, tagId:null, createdAt: Date.now()};
+  const f = {id:uid(), name, emoji:'', color: DEFAULT_COLOR, parentId: currentParent, saved:false, tagId:null, createdAt: Date.now()};
+  if(folderDefaultMode === 'cover' && defaultFolderCover){
+    f.cover = randomFolderCover ? pickRandomFolderCover() : defaultFolderCover;
+  } else {
+    f.color = randomFolderColor ? pickRandomFolderColor() : defaultFolderColor;
+  }
   folders.push(f);
   nfCreatedIds.push(f.id);
   return f;
