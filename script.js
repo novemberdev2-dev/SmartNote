@@ -1,7 +1,15 @@
+/* ---------- PWA: register service worker ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .catch(err => console.error('Service worker registration failed:', err));
+  });
+}
+
 /* ---------- state ---------- */
 let folders = [];
 let deleted = [];
-let currentParent = null;
+let currentParent = null;   // folder id we're viewing inside, null = root
 let activeTab = 'home';
 let activeFolderId = null;  // folder currently targeted by a menu/modal
 let activeTrashId = null;   // trashed folder currently targeted by the trash menu/modal
