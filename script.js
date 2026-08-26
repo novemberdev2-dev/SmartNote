@@ -1,7 +1,7 @@
 /* ---------- state ---------- */
 let folders = [];
 let deleted = [];
-let currentParent = null;   // folder id we're viewing inside, null = root
+let currentParent = null;
 let activeTab = 'home';
 let activeFolderId = null;  // folder currently targeted by a menu/modal
 let activeTrashId = null;   // trashed folder currently targeted by the trash menu/modal
