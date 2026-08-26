@@ -75,7 +75,13 @@
     tap-highlight-color:transparent;
     outline:none;
   }
-  html,body{height:100%;}
+  html,body{
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    position:fixed;
+    width:100%;
+  }
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
