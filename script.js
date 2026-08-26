@@ -6,6 +6,17 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+/* ---------- lock layout height using real viewport (some WebViews miscalculate dvh) ---------- */
+function setAppHeight(){
+  document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+}
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') setAppHeight();
+});
+
 /* ---------- state ---------- */
 let folders = [];
 let deleted = [];
