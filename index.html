@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartNote</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone">
+
+  <div class="topbar">
+    <div class="search-pill">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search folders" autocomplete="off">
+    </div>
+    <img class="avatar" id="avatarBtn" src="https://i.imgur.com/y4e2w97.jpeg" alt="Profile picture">
+  </div>
+
+  <div class="breadcrumb" id="breadcrumb" style="display:none;">
+    <div class="crumb-left">
+      <button id="backBtn" style="display:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="crumb-home" id="crumbHome">Home</span>
+      <span id="crumbSep" style="display:none;">/</span>
+      <span class="crumb-name" id="crumbName" style="display:none;"></span>
+    </div>
+    <div class="crumb-right">
+      <button class="dots-btn" id="breadcrumbSelectBtn" title="Select">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </button>
+      <button class="dots-btn" id="breadcrumbSortBtn" title="Sort by">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="M3 17l3 3 3-3"/><path d="M6 18V4"/></svg>
+      </button>
+      <button class="dots-btn" id="breadcrumbFolderSettingsBtn" title="Folder settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="folder-grid" id="folderGrid"></div>
+    <div class="empty-state" id="emptyState" style="display:none;"></div>
+  </div>
+
+  <button class="fab" id="fabBtn">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- select mode footer -->
+  <div class="action-footer" id="selectFooter">
+    <button id="selectCancelBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Cancel
+    </button>
+    <button id="selectMoveBtn" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 13H15M15 13L13 11M15 13L13 15M12.0627 6.06274L11.9373 5.93726C11.5914 5.59135 11.4184 5.4184 11.2166 5.29472C11.0376 5.18506 10.8425 5.10425 10.6385 5.05526C10.4083 5 10.1637 5 9.67452 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V15.8C3 16.9201 3 17.4802 3.21799 17.908C3.40973 18.2843 3.71569 18.5903 4.09202 18.782C4.51984 19 5.07989 19 6.2 19H17.8C18.9201 19 19.4802 19 19.908 18.782C20.2843 18.5903 20.5903 18.2843 20.782 17.908C21 17.4802 21 16.9201 21 15.8V10.2C21 9.0799 21 8.51984 20.782 8.09202C20.5903 7.71569 20.2843 7.40973 19.908 7.21799C19.4802 7 18.9201 7 17.8 7H14.3255C13.8363 7 13.5917 7 13.3615 6.94474C13.1575 6.89575 12.9624 6.81494 12.7834 6.70528C12.5816 6.5816 12.4086 6.40865 12.0627 6.06274Z"/></svg>
+      Move
+    </button>
+    <button id="selectDeleteBtn" class="danger" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete
+    </button>
+  </div>
+
+  <!-- trash select mode footer -->
+  <div class="action-footer" id="trashSelectFooter">
+    <button id="trashSelectCancelBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Cancel
+    </button>
+    <button id="trashSelectRestoreBtn" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>
+      Restore
+    </button>
+    <button id="trashSelectDeleteBtn" class="danger" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete forever
+    </button>
+  </div>
+
+  <!-- manual sort footer -->
+  <div class="sort-footer" id="manualSortFooter">
+    <button class="btn-cancel" id="manualSortCancelBtn">Cancel</button>
+    <button class="btn-primary" id="manualSortSaveBtn">Save</button>
+  </div>
+
+  <div class="bottomnav" id="bottomNav">
+    <button class="navbtn active" data-tab="home" title="Home">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+    </button>
+    <button class="navbtn" data-tab="saved" title="Saved">
+      <svg width="19px" height="19px" viewBox="0 0 1024 1024" fill="currentColor" class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M802.4 967.2c-7.2 0-15.2-1.6-21.6-4.8l-258.4-128.8-252.8 140c-18.4 10.4-41.6 5.6-56-9.6-8.8-9.6-12.8-23.2-11.2-36.8l43.2-285.6L33.6 444C20.8 432 16 414.4 21.6 397.6c4.8-16.8 18.4-28.8 36-31.2l285.6-48L464.8 56c7.2-15.2 22.4-25.6 39.2-26.4 17.6-0.8 33.6 8.8 41.6 24l133.6 256.8 287.2 35.2c17.6 2.4 31.2 13.6 36.8 30.4 5.6 16 1.6 34.4-10.4 46.4L790.4 629.6l55.2 284c2.4 12.8-0.8 26.4-8.8 36.8-8.8 10.4-21.6 16.8-34.4 16.8zM520.8 784.8c7.2 0 15.2 1.6 21.6 4.8l255.2 127.2-54.4-280c-3.2-14.4 1.6-29.6 12-40l200-203.2L672 358.4c-14.4-1.6-28-11.2-34.4-24L506.4 81.6 385.6 340c-6.4 13.6-19.2 23.2-33.6 25.6L70.4 412l208 194.4c11.2 10.4 16 24.8 13.6 40L249.6 928l249.6-137.6c7.2-3.2 14.4-4.8 21.6-5.6z" fill=""></path></g></svg>
+    </button>
+    <button class="navbtn" data-tab="tags" title="Tags">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H4a2 2 0 0 0-2 2v8l10.6 10.6a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8L12 2Z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button class="navbtn trash" data-tab="trash" title="Trash">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </button>
+  </div>
+
+  <!-- overlay to close popovers -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- fab menu -->
+  <div class="panel" id="fabMenu" style="display:none;">
+    <button onclick="toast('Not available in this test')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Import PDF, PPT etc..
+    </button>
+    <button onclick="toast('Not available in this test')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      New note
+    </button>
+    <button onclick="openNewFolderModal()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+      New folder
+    </button>
+  </div>
+
+  <!-- folder context menu -->
+  <div class="panel" id="folderMenu" style="display:none;">
+    <button onclick="openColorModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-4-4 4 4 0 0 1-4-4 4 4 0 0 1-2-2Z"/></svg>
+      Customize folder
+    </button>
+
+        <button onclick="openRenameModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Rename
+        </button>
+    
+    <button onclick="openTagModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2H4a2 2 0 0 0-2 2v8l10.6 10.6a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8L12 2Z"/></svg>
+      Tag folder
+    </button>
+    <button id="saveFolderBtn" onclick="toggleSaveFolder()">
+      <svg width="16px" height="16px" viewBox="0 0 1024 1024" fill="currentColor" class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M802.4 967.2c-7.2 0-15.2-1.6-21.6-4.8l-258.4-128.8-252.8 140c-18.4 10.4-41.6 5.6-56-9.6-8.8-9.6-12.8-23.2-11.2-36.8l43.2-285.6L33.6 444C20.8 432 16 414.4 21.6 397.6c4.8-16.8 18.4-28.8 36-31.2l285.6-48L464.8 56c7.2-15.2 22.4-25.6 39.2-26.4 17.6-0.8 33.6 8.8 41.6 24l133.6 256.8 287.2 35.2c17.6 2.4 31.2 13.6 36.8 30.4 5.6 16 1.6 34.4-10.4 46.4L790.4 629.6l55.2 284c2.4 12.8-0.8 26.4-8.8 36.8-8.8 10.4-21.6 16.8-34.4 16.8zM520.8 784.8c7.2 0 15.2 1.6 21.6 4.8l255.2 127.2-54.4-280c-3.2-14.4 1.6-29.6 12-40l200-203.2L672 358.4c-14.4-1.6-28-11.2-34.4-24L506.4 81.6 385.6 340c-6.4 13.6-19.2 23.2-33.6 25.6L70.4 412l208 194.4c11.2 10.4 16 24.8 13.6 40L249.6 928l249.6-137.6c7.2-3.2 14.4-4.8 21.6-5.6z" fill=""></path></g></svg>
+      <span id="saveFolderBtnLabel">Favorite</span>
+    </button>
+    <button onclick="openMoveModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 13H15M15 13L13 11M15 13L13 15M12.0627 6.06274L11.9373 5.93726C11.5914 5.59135 11.4184 5.4184 11.2166 5.29472C11.0376 5.18506 10.8425 5.10425 10.6385 5.05526C10.4083 5 10.1637 5 9.67452 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V15.8C3 16.9201 3 17.4802 3.21799 17.908C3.40973 18.2843 3.71569 18.5903 4.09202 18.782C4.51984 19 5.07989 19 6.2 19H17.8C18.9201 19 19.4802 19 19.908 18.782C20.2843 18.5903 20.5903 18.2843 20.782 17.908C21 17.4802 21 16.9201 21 15.8V10.2C21 9.0799 21 8.51984 20.782 8.09202C20.5903 7.71569 20.2843 7.40973 19.908 7.21799C19.4802 7 18.9201 7 17.8 7H14.3255C13.8363 7 13.5917 7 13.3615 6.94474C13.1575 6.89575 12.9624 6.81494 12.7834 6.70528C12.5816 6.5816 12.4086 6.40865 12.0627 6.06274Z"/></svg>
+      Move folder
+    </button>
+    <button onclick="duplicateFolder()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h12"/></svg>
+      Duplicate folder
+    </button>
+    <button onclick="openDetailsModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Details
+    </button>
+    <div class="divider"></div>
+    <button class="danger" onclick="openDeleteModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete
+    </button>
+  </div>
+
+  <!-- trashed folder context menu -->
+  <div class="panel" id="trashMenu" style="display:none;">
+    <button onclick="restoreActiveTrashItem()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>
+      Restore
+    </button>
+    <div class="divider"></div>
+    <button class="danger" onclick="openPermaDeleteModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete forever
+    </button>
+  </div>
+
+  <!-- select submenu -->
+  <div class="panel" id="selectMenu" style="display:none;">
+    <button onclick="selectAllItems()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Select All
+    </button>
+    <button onclick="enterSelectMode()">
+      <svg width="16px" height="16px" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="#000000" transform="matrix(-1, 0, 0, 1, 0, 0)"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <defs> <clipPath id="clip-pointer2"> <rect width="32" height="32"></rect> </clipPath> </defs> <g id="pointer2" clip-path="url(#000clip-pointer2)"> <g id="Group_2338" data-name="Group 2338" transform="translate(-468 -260)"> <g id="Group_2334" data-name="Group 2334"> <g id="Group_2333" data-name="Group 2333"> <g id="Group_2332" data-name="Group 2332"> <path id="Path_3837" data-name="Path 3837" d="M491.8,265.339a5.753,5.753,0,0,0-8.126,0,.5.5,0,0,0,.707.707,4.746,4.746,0,1,1,6.712,6.712.5.5,0,0,0,.707.707A5.753,5.753,0,0,0,491.8,265.339Z" fill="#000"></path> </g> </g> </g> <g id="Group_2337" data-name="Group 2337"> <g id="Group_2336" data-name="Group 2336"> <g id="Group_2335" data-name="Group 2335"> <path id="Path_3838" data-name="Path 3838" d="M494.347,262.8a9.342,9.342,0,0,0-14.968,10.771l-.6.6a4.462,4.462,0,0,0-2.6.125,8.876,8.876,0,0,0-4.753,5.031,9.766,9.766,0,0,0,.6,7.577,8.609,8.609,0,0,0,5.285,4.77,7.112,7.112,0,0,0,1.938.268,7.2,7.2,0,0,0,3.89-1.142,41.143,41.143,0,0,0,6.372-5.485,2.664,2.664,0,0,0,.778-2.01,2.349,2.349,0,0,0-.85-1.723l-.068-.053a2.592,2.592,0,0,0-.363-2.881,9.327,9.327,0,0,0,5.334-15.848Zm-6.266,21.123a40.074,40.074,0,0,1-6.017,5.194,5.181,5.181,0,0,1-4.206.632,6.47,6.47,0,0,1-4.026-3.716,7.788,7.788,0,0,1-.523-6.029,6.812,6.812,0,0,1,3.345-3.708l-1.161,1.161a1,1,0,1,0,1.414,1.414l2.882-2.881v0l7.3-7.3a.993.993,0,0,1,1.369,0,.968.968,0,0,1,0,1.368l-6.228,6.229a1,1,0,1,0,1.414,1.414l.95-.95a.945.945,0,0,0,.132-.088.831.831,0,0,1,1.148,0,.809.809,0,0,1,.238.574.843.843,0,0,1-.271.607l-.684.751a1,1,0,0,0,1.478,1.347l.009-.009.005,0a.593.593,0,0,1,.866.809l-.939.76a2.9,2.9,0,0,0-.56.466,1,1,0,0,0,1.363,1.456l.376-.3a.366.366,0,0,1,.42.011.355.355,0,0,1,.122.274A.7.7,0,0,1,488.081,283.92Zm-.019-7.19a2.789,2.789,0,0,0-.775-1.484,2.645,2.645,0,0,0-.7-.488l3.288-3.288a2.968,2.968,0,0,0,0-4.2,3.039,3.039,0,0,0-4.2,0l-4.779,4.779a7.35,7.35,0,1,1,7.167,4.678Z" fill="#000"></path> </g> </g> </g> </g> </g> </g></svg>
+      Select manually
+    </button>
+  </div>
+
+  <!-- sort by submenu -->
+  <div class="panel" id="sortMenu" style="display:none;">
+    <button onclick="sortByName()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h6"/></svg>
+      Name
+    </button>
+    <button onclick="sortByDate()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Date created
+    </button>
+    <button onclick="openManualSort()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg>
+      Sort manually
+    </button>
+  </div>
+
+  <!-- folder settings panel (default folder color / cover) -->
+  <div class="panel folder-settings-panel" id="folderSettingsMenu" style="display:none;">
+
+    <div class="fs-section">
+      <div class="fs-section-head">
+        <div class="fs-title">Default Folder Color</div>
+        <button type="button" class="fs-checkbox" id="fsColorCheckbox" onclick="fsSwitchSection('color')" aria-label="Use color as the default folder style">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
+      <div class="fs-section-body" id="fsColorBody">
+        <div class="color-row fs-color-row" id="fsColorRow"></div>
+        <div class="fs-random-row">
+          <span class="fs-random-label">Random color when a folder is created</span>
+          <label class="nf-switch">
+            <input type="checkbox" id="fsRandomColorToggle" onchange="fsToggleRandomColor()">
+            <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="fs-divider"></div>
+
+    <div class="fs-section">
+      <div class="fs-section-head">
+        <div class="fs-title">Default Folder Cover</div>
+        <button type="button" class="fs-checkbox" id="fsCoverCheckbox" onclick="fsSwitchSection('cover')" aria-label="Use cover as the default folder style">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
+      <div class="fs-section-body" id="fsCoverBody">
+        <div class="cover-row fs-cover-row" id="fsCoverRow"></div>
+        <div class="fs-random-row">
+          <span class="fs-random-label">Random cover when a folder is created</span>
+          <label class="nf-switch">
+            <input type="checkbox" id="fsRandomCoverToggle" onchange="fsToggleRandomCover()">
+            <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn-cancel" onclick="closeAllPanels()">Cancel</button>
+      <button class="btn-primary" onclick="fsSaveSettings()">Save</button>
+    </div>
+  </div>
+
+  <!-- profile panel -->
+  <div class="panel" id="profilePanel" style="display:none; right:16px; top:64px;">
+    <div class="profile-head">
+      <img class="a" src="https://i.imgur.com/y4e2w97.jpeg" alt="Profile picture">
+      <div>
+        <div class="name">Shabaz
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#3b82f6" stroke="#fff" stroke-width="1"><path d="M12 2 14.5 6l4.7.5-3.4 3.3.9 4.7L12 12.2 7.3 14.5l.9-4.7L4.8 6.5 9.5 6Z"/></svg>
+        </div>
+        <div class="email">shabazkurdi100@gmail.com</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <button onclick="toast('Not available in this test')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Edit profile
+    </button>
+    <button onclick="openSettingsModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      Settings
+    </button>
+    <button class="danger" onclick="toast('Not available in this test')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal-back" id="newFolderModal">
+    <div class="modal">
+      <div class="nf-header">
+        <h3>New folder</h3>
+        <div class="nf-stepper">
+          <button type="button" class="nf-step-btn" id="nfMinusBtn" onclick="nfChangeCount(-1)" aria-label="Fewer folders">−</button>
+          <span class="nf-count" id="nfCountLabel">1</span>
+          <button type="button" class="nf-step-btn" id="nfPlusBtn" onclick="nfChangeCount(1)" aria-label="More folders">+</button>
+        </div>
+      </div>
+      <div class="nf-input-row">
+        <input type="text" id="newFolderInput" placeholder="Folder name" maxlength="40">
+        <button type="button" class="nf-next-btn" id="nfNextBtn" onclick="nfNext()" aria-label="Next folder" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+      <div class="nf-auto-row">
+        <span class="nf-auto-label">Auto folder names</span>
+        <label class="nf-switch">
+          <input type="checkbox" id="nfAutoToggle" onchange="nfToggleAuto()">
+          <span class="nf-switch-track"><span class="nf-switch-thumb"></span></span>
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn-cancel" onclick="cancelNewFolder()">Cancel</button>
+        <button class="btn-primary" onclick="createFolder()">Done</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="modal-back" id="colorModal">
+    <div class="modal">
+      <div class="cf-preview">
+        <div class="cf-preview-svg" id="cfPreviewSvg"></div>
+        <div class="cf-hex-readout" id="cfHexReadout">
+          <span><span class="cf-hex-dot" id="cfDotTop"></span><span id="cfHexTop">#3B82F6</span></span>
+          <span><span class="cf-hex-dot" id="cfDotBody"></span><span id="cfHexBody">#3B82F6</span></span>
+        </div>
+      </div>
+      <div class="cf-tabs">
+        <button type="button" class="cf-tab" id="cfTabColor" onclick="cfSwitchTab('color')">Color</button>
+        <button type="button" class="cf-tab" id="cfTabCover" onclick="cfSwitchTab('cover')">Cover</button>
+      </div>
+      <div id="cfColorSection">
+        <div class="color-row" id="swatchRow"></div>
+        <div class="cf-custom-row">
+          <label for="cfCustomColor">Custom</label>
+          <input type="color" id="cfCustomColor" value="#3b82f6">
+          <input type="text" class="cf-hexfield" id="cfHexInput" value="#3B82F6" maxlength="7">
+        </div>
+      </div>
+      <div id="cfCoverSection" style="display:none;">
+        <div class="cover-row" id="coverRow"></div>
+      </div>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-primary" onclick="confirmColor()">Save</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-back" id="renameModal">
+    <div class="modal">
+      <h3>Rename folder</h3>
+      <input type="text" id="renameInput" maxlength="40">
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-primary" onclick="confirmRename()">Save</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-back" id="tagModal">
+    <div class="modal">
+      <h3>Tag folder</h3>
+      <div class="tag-list" id="tagListRow"></div>
+      <div id="tagCreateForm" style="display:none;">
+        <input type="text" id="newTagInput" placeholder="Tag name" maxlength="24">
+        <div class="swatches" id="tagSwatchRow"></div>
+      </div>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-primary" onclick="confirmTag()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="moveModal">
+    <div class="modal">
+      <h3 id="moveModalTitle">Move folder to:</h3>
+      <div class="move-crumb" id="moveCrumb">
+        <button class="move-crumb-back" id="moveBackBtn" onclick="moveNavBack()" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span id="moveCrumbLabel">Home</span>
+      </div>
+      <div class="move-grid" id="moveList"></div>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-primary" id="moveHereBtn" onclick="confirmMoveHere()">Move here</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="detailsModal">
+    <div class="modal">
+      <h3 id="detailsFolderName">Folder details</h3>
+      <div class="details-list">
+        <div class="details-row">
+          <span class="details-label">Date created</span>
+          <span class="details-value" id="detailsDate">—</span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Time created</span>
+          <span class="details-value" id="detailsTime">—</span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Items inside</span>
+          <span class="details-value" id="detailsItems">—</span>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn-primary" style="flex:1;" onclick="closeModals()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="settingsModal">
+    <div class="modal">
+      <h3>Settings</h3>
+      <div class="settings-section-title">Modes</div>
+      <div class="mode-grid" id="modeGrid">
+        <div class="mode-option" data-mode="light" onclick="applyTheme('light')">
+          <span class="swatch-dot" style="background:#ffffff; border:1px solid #e2e5eb;"></span>
+          Light mode
+        </div>
+        <div class="mode-option" data-mode="dark" onclick="applyTheme('dark')">
+          <span class="swatch-dot" style="background:#15171c;"></span>
+          Dark mode
+        </div>
+        <div class="mode-option" data-mode="blue" onclick="applyTheme('blue')">
+          <span class="swatch-dot" style="background:#cfe4fb;"></span>
+          Blue mode
+        </div>
+        <div class="mode-option" data-mode="pink" onclick="applyTheme('pink')">
+          <span class="swatch-dot" style="background:#fbd5e8;"></span>
+          Pink mode
+        </div>
+      </div>
+      <div class="settings-section-title">Language</div>
+      <div class="lang-row" onclick="toast('Language options are not available yet')">
+        <span>App language</span>
+        <span class="tag-unavailable">Unavailable</span>
+      </div>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="deleteModal">
+    <div class="modal">
+      <h3>Delete folder?</h3>
+      <p style="color:#6b7280; font-size:14px; margin:0 0 4px;">This moves the folder to Trash. You can find it under the trash tab.</p>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-danger" onclick="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="permaDeleteModal">
+    <div class="modal">
+      <h3>Delete forever?</h3>
+      <p style="color:#6b7280; font-size:14px; margin:0 0 4px;">This folder will be permanently deleted. This can't be undone.</p>
+      <div class="row">
+        <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+        <button class="btn-danger" onclick="confirmPermaDelete()">Delete forever</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
