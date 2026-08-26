@@ -1,4 +1,4 @@
-const CACHE_NAME = "smartnote-cache-v2";
+const CACHE_NAME = "smartnote-cache-v3";
 
 const urlsToCache = [
   "./",
@@ -6,7 +6,16 @@ const urlsToCache = [
   "./styles.css",
   "./script.js",
   "./manifest.json",
-  "./SmartNote-icon.png"
+  "./SmartNote-icon.png",
+  "./Cover1.svg",
+  "./Cover2.svg",
+  "./Cover3.svg",
+  "./Cover4.svg",
+  "./Cover5.svg",
+  "./Cover6.svg",
+  "./Cover7.svg",
+  "./Cover8.svg",
+  "./Cover9.svg"
 ];
 
 self.addEventListener("install", event => {
@@ -31,7 +40,23 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+
+      return fetch(event.request).then(networkResponse => {
+        // Only cache successful, same-origin responses (skip errors, opaque cross-origin, etc.)
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          event.request.url.startsWith(self.location.origin)
+        ) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => cached); // if offline and not cached, this will just fail as before
+    })
   );
 });
